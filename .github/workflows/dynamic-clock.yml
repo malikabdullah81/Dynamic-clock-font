@@ -1,33 +1,32 @@
 name: Dynamic Clock build
 
-# Builds the app from DynamicClock.zip whenever that file is uploaded (or run it by hand).
 on:
   push:
-    paths:
-      - 'DynamicClock.zip'
-      - '.github/workflows/dynamic-clock.yml'
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Unpack project
-        run: |
-          mkdir dc
-          unzip -q DynamicClock.zip -d dc
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-      - uses: gradle/actions/setup-gradle@v4
-      - name: Build debug APK
-        run: |
-          cd dc
-          chmod +x gradlew
-          ./gradlew --no-daemon assembleDebug
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dynamicclock-debug
-          path: dc/app/build/outputs/apk/debug/*.apk
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Build debug APK
+      run: ./gradlew --no-daemon assembleDebug
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: dynamicclock-debug
+        path: app/build/outputs/apk/debug/*.apk
