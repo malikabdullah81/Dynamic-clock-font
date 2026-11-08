@@ -41,7 +41,7 @@ jobs:
             ./gradlew assembleDebug --stacktrace --no-daemon
           else
             gradle assembleDebug --stacktrace --no-daemon
-          fi
+          fi 
 
       - uses: actions/upload-artifact@v4
         with:
