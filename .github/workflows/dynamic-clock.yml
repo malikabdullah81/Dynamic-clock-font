@@ -1,10 +1,10 @@
 name: Dynamic Clock build
 
-# Builds the app from DynamicClock.zip whenever that file is uploaded (or run it by hand).
 on:
   push:
     paths:
       - 'DynamicClock.zip'
+      - '.github/workflows/dynamic-clock.yml'
   workflow_dispatch:
 
 jobs:
@@ -12,27 +12,33 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Unpack project
         run: |
-          mkdir dc
+          mkdir -p dc
           unzip -q DynamicClock.zip -d dc
-          
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-          
-      - uses: gradle/actions/setup-gradle@v4
-      
+          echo "=== Extracted structure ==="
+          find dc -maxdepth 3 -type d
+
+      - name: Make gradlew executable
+        run: chmod +x dc/DynamicClock/gradlew
+
       - name: Build debug APK
-        run: |
-          # Navigate into the actual extracted project folder
-          cd dc/DynamicClock
-          chmod +x gradlew
-          ./gradlew --no-daemon assembleDebug
-          
-      - uses: actions/upload-artifact@v4
+        working-directory: dc/DynamicClock
+        run: ./gradlew --no-daemon assembleDebug --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
           name: dynamicclock-debug
           path: dc/DynamicClock/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
