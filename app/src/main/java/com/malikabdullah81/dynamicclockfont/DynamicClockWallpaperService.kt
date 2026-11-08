@@ -1,10 +1,5 @@
 package com.malikabdullah81.dynamicclockfont
 
-import android.animation.ValueAnimator
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -13,7 +8,6 @@ import android.os.Handler
 import android.os.Looper
 import android.service.wallpaper.WallpaperService
 import android.view.SurfaceHolder
-import android.view.animation.DecelerateInterpolator
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -28,28 +22,9 @@ class DynamicClockWallpaperService : WallpaperService() {
         private val handler = Handler(Looper.getMainLooper())
         private var visible = false
 
-        // One UI 8.5 Screen-on dot-to-expanded bloom animation
-        private var animProgress = 1f
-        private val revealAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = 650
-            interpolator = DecelerateInterpolator(1.8f)
-            addUpdateListener { animator ->
-                animProgress = animator.animatedValue as Float
-                if (visible) {
-                    drawFrame()
-                }
-            }
-        }
-
-        // Broadcast receiver to catch screen wake events on Samsung One UI
-        private val screenOnReceiver = object : BroadcastReceiver() {
-            override fun onReceive(context: Context?, intent: Intent?) {
-                if (intent?.action == Intent.ACTION_SCREEN_ON) {
-                    triggerBloomAnimation()
-                }
-            }
-        }
-        private var receiverRegistered = false
+        // Frame-driven animation tracking
+        private var animStartTime = 0L
+        private val animDuration = 600L // 600ms smooth bloom duration
 
         private val clockPaint = Paint().apply {
             isAntiAlias = true
@@ -76,37 +51,29 @@ class DynamicClockWallpaperService : WallpaperService() {
             override fun run() {
                 if (visible) {
                     drawFrame()
-                    handler.postDelayed(this, 1000L)
+                    
+                    // Check if the bloom animation is still running
+                    val elapsed = System.currentTimeMillis() - animStartTime
+                    if (elapsed < animDuration) {
+                        // Render at ~60fps (16ms) during the animation
+                        handler.postDelayed(this, 16L)
+                    } else {
+                        // Slow down refresh to once per second once animation completes (saves battery)
+                        handler.postDelayed(this, 1000L)
+                    }
                 }
             }
-        }
-
-        override fun onCreate(surfaceHolder: SurfaceHolder?) {
-            super.onCreate(surfaceHolder)
-            // Register screen-on receiver
-            try {
-                val filter = IntentFilter(Intent.ACTION_SCREEN_ON)
-                registerReceiver(screenOnReceiver, filter)
-                receiverRegistered = true
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-
-        private fun triggerBloomAnimation() {
-            animProgress = 0f
-            revealAnimator.cancel()
-            revealAnimator.start()
         }
 
         override fun onVisibilityChanged(isVisible: Boolean) {
             visible = isVisible
             if (isVisible) {
-                triggerBloomAnimation()
+                // Restart animation progress every single time the screen turns on / lock screen opens
+                animStartTime = System.currentTimeMillis()
+                handler.removeCallbacks(drawRunnable)
                 handler.post(drawRunnable)
             } else {
                 handler.removeCallbacks(drawRunnable)
-                revealAnimator.cancel()
             }
         }
 
@@ -114,18 +81,6 @@ class DynamicClockWallpaperService : WallpaperService() {
             super.onSurfaceDestroyed(holder)
             visible = false
             handler.removeCallbacks(drawRunnable)
-            revealAnimator.cancel()
-        }
-
-        override fun onDestroy() {
-            super.onDestroy()
-            if (receiverRegistered) {
-                try {
-                    unregisterReceiver(screenOnReceiver)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
-            }
         }
 
         private fun drawFrame() {
@@ -153,10 +108,16 @@ class DynamicClockWallpaperService : WallpaperService() {
             val centerX = width / 2f
             val centerY = height * 0.32f
 
+            // Calculate precise animation progress (0.0 to 1.0) with ease-out curve
+            val elapsed = System.currentTimeMillis() - animStartTime
+            val rawProgress = (elapsed.toFloat() / animDuration).coerceIn(0f, 1f)
+            // Cubic ease-out for buttery smooth deceleration
+            val animProgress = 1f - Math.pow((1f - rawProgress).toDouble(), 3.0).toFloat()
+
             canvas.drawColor(Color.BLACK)
             canvas.save()
 
-            // Screen-on bloom scaling effect (blooms from a tiny dot to full size)
+            // Screen-on bloom scaling effect (blooms from tiny dot to 100%)
             val scale = 0.05f + (0.95f * animProgress)
             canvas.scale(scale, scale, centerX, centerY)
 
