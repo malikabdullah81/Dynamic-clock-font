@@ -1,10 +1,10 @@
 name: Dynamic Clock build
 
+# Builds the app from DynamicClock.zip whenever that file is uploaded (or run it by hand).
 on:
   push:
     paths:
       - 'DynamicClock.zip'
-      - '.github/workflows/dynamic-clock.yml'
   workflow_dispatch:
 
 jobs:
@@ -12,44 +12,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK components
-        run: |
-          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "sdk.dir=$ANDROID_HOME" > local.properties
-          ls -la $ANDROID_HOME
-
       - name: Unpack project
         run: |
-          mkdir -p dc
+          mkdir dc
           unzip -q DynamicClock.zip -d dc
-          echo "=== Extracted structure ==="
-          find dc -maxdepth 3 -type d
-          cp local.properties dc/DynamicClock/local.properties
-          cat dc/DynamicClock/local.properties
-
-      - name: Make gradlew executable
-        run: chmod +x dc/DynamicClock/gradlew
-
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
       - name: Build debug APK
-        working-directory: dc/DynamicClock
         run: |
-          echo "ANDROID_HOME is: $ANDROID_HOME"
-          ./gradlew --no-daemon assembleDebug --stacktrace
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+          cd dc
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug
+      - uses: actions/upload-artifact@v4
         with:
           name: dynamicclock-debug
-          path: dc/DynamicClock/app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
+          path: dc/app/build/outputs/apk/debug/*.apk
