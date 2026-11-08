@@ -13,8 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
@@ -35,9 +34,5 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: dynamicclock-debug
+          name: dynamicclock-apk
           path: dc/**/build/outputs/apk/debug/*.apk
-      - uses: actions/upload-artifact@v4
-        with:
-          name: dynamicclock-debug
-          path: dc/**/build/outputs/apk/debug/*.apk 
