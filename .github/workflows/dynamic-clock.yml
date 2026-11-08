@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - 'DynamicClock.zip'
+      - '.github/workflows/dynamic-clock.yml'
   workflow_dispatch:
 
 jobs:
