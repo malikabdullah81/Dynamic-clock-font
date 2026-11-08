@@ -46,4 +46,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: dynamicclock-debug
-          path: dc/**/build/outputs/apk/debug/*.apk
+          path: dc/**/build/outputs/apk/debug/*.apk 
