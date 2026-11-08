@@ -1,10 +1,10 @@
 name: Dynamic Clock build
 
-# Builds the app from DynamicClock.zip whenever that file is uploaded (or run it by hand).
 on:
   push:
     paths:
-      - 'DynamicClock.zip'
+      - DynamicClock.zip
+      - .github/workflows/dynamic-clock.yml
   workflow_dispatch:
 
 jobs:
@@ -12,21 +12,38 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Unpack project
-        run: |
-          mkdir dc
-          unzip -q DynamicClock.zip -d dc
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.13
+
+      - name: Unzip project
+        run: |
+          rm -rf dc && mkdir dc
+          unzip -q DynamicClock.zip -d dc
+          SETTINGS=$(find dc -maxdepth 3 \( -name settings.gradle -o -name settings.gradle.kts \) | head -n1)
+          if [ -z "$SETTINGS" ]; then echo "No settings.gradle found in zip"; find dc | head -50; exit 1; fi
+          echo "PROJECT_DIR=$(dirname "$SETTINGS")" >> "$GITHUB_ENV"
+          find "$(dirname "$SETTINGS")" -maxdepth 3 | head -60
+
       - name: Build debug APK
         run: |
-          cd dc
-          chmod +x gradlew
-          ./gradlew --no-daemon assembleDebug
+          cd "$PROJECT_DIR"
+          if [ -f gradlew ]; then
+            chmod +x gradlew
+            ./gradlew assembleDebug --stacktrace --no-daemon
+          else
+            gradle assembleDebug --stacktrace --no-daemon
+          fi
+
       - uses: actions/upload-artifact@v4
         with:
           name: dynamicclock-debug
-          path: dc/app/build/outputs/apk/debug/*.apk
+          path: dc/**/build/outputs/apk/debug/*.apk
