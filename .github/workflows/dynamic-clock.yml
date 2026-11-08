@@ -13,16 +13,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
-
-      - uses: android-actions/setup-android@v3
-
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: 8.13
+          java-version: 17
 
       - name: Unzip project
         run: |
@@ -31,18 +26,17 @@ jobs:
           SETTINGS=$(find dc -maxdepth 3 \( -name settings.gradle -o -name settings.gradle.kts \) | head -n1)
           if [ -z "$SETTINGS" ]; then echo "No settings.gradle found in zip"; find dc | head -50; exit 1; fi
           echo "PROJECT_DIR=$(dirname "$SETTINGS")" >> "$GITHUB_ENV"
-          find "$(dirname "$SETTINGS")" -maxdepth 3 | head -60
 
       - name: Build debug APK
         run: |
           cd "$PROJECT_DIR"
-          if [ -f gradlew ]; then
-            chmod +x gradlew
-            ./gradlew assembleDebug --stacktrace --no-daemon
-          else
-            gradle assembleDebug --stacktrace --no-daemon
-          fi 
+          chmod +x gradlew
+          ./gradlew assembleDebug --stacktrace --no-daemon
 
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dynamicclock-debug
+          path: dc/**/build/outputs/apk/debug/*.apk
       - uses: actions/upload-artifact@v4
         with:
           name: dynamicclock-debug
