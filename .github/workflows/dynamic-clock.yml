@@ -19,14 +19,17 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Install Gradle
-      run: sudo apt-get update && sudo apt-get install -y gradle
+    - name: Download and Setup Gradle 8.5
+      run: |
+        wget https://services.gradle.org/distributions/gradle-8.5-bin.zip
+        unzip -q gradle-8.5-bin.zip
+        echo "$PWD/gradle-8.5/bin" >> $GITHUB_PATH
 
     - name: Build debug APK
-      run: gradle assembleDebug
+      run: gradle assembleDebug --no-daemon
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: dynamicclock-debug
-        path: app/build/outputs/apk/debug/*.apk 
+        path: app/build/outputs/apk/debug/*.apk
