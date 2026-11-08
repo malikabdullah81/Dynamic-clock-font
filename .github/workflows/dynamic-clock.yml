@@ -22,19 +22,30 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install Android SDK components
+        run: |
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          ls -la $ANDROID_HOME
+
       - name: Unpack project
         run: |
           mkdir -p dc
           unzip -q DynamicClock.zip -d dc
           echo "=== Extracted structure ==="
           find dc -maxdepth 3 -type d
+          cp local.properties dc/DynamicClock/local.properties
+          cat dc/DynamicClock/local.properties
 
       - name: Make gradlew executable
         run: chmod +x dc/DynamicClock/gradlew
 
       - name: Build debug APK
         working-directory: dc/DynamicClock
-        run: ./gradlew --no-daemon assembleDebug --stacktrace
+        run: |
+          echo "ANDROID_HOME is: $ANDROID_HOME"
+          ./gradlew --no-daemon assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
